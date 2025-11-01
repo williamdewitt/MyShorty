@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyShorty.Api.Tests", "test\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyShorty.Api.Integration.Tests", "test\MyShorty.Api.Integration.Tests\MyShorty.Api.Integration.Tests.csproj", "{3945708C-A47F-4161-BEC5-EB9B337A1300}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Build", ".pipelines\build\Build.csproj", "{9E64883F-348B-410D-87C0-9A88A8B88E2D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "build", "build\Build.csproj", "{9E64883F-348B-410D-87C0-9A88A8B88E2D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
