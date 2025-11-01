@@ -1,4 +1,4 @@
-# 🔗 TinyURL Clone — Learning the Art of Short Links
+# 🔗 MyShorty, a TinyURL Clone — Learning the Art of Short Links
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-blueviolet?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
