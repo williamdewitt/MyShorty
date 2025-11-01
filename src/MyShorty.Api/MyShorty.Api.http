@@ -1,0 +1,27 @@
+@MyShorty.Api_HostAddress = http://localhost:5290
+
+POST {{MyShorty.Api_HostAddress}}/generateShortUrl/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "Url": "https://bowscore.leansparkdigital.com/"
+}
+
+###
+POST {{MyShorty.Api_HostAddress}}/generateShortUrl/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "Url": "https://www.google.com/"
+}
+
+###
+POST {{MyShorty.Api_HostAddress}}/generateShortUrl/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "Url": "https://bowscore.leansparkdigital.com/practice"
+}

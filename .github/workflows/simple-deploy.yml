@@ -1,0 +1,199 @@
+name: Simple Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test and Code Coverage
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Run Nuke.Build
+      run: nuke
+
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run tests with coverage
+      run: |
+        dotnet test tests/BowScore.Core.Tests/BowScore.Core.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./coverage \
+          --logger "trx;LogFileName=test-results.trx" \
+          --verbosity normal
+
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+    - name: Generate coverage report
+      run: |
+        reportgenerator \
+          -reports:"coverage/**/coverage.cobertura.xml" \
+          -targetdir:"coverage/report" \
+          -reporttypes:"Html;Cobertura;JsonSummary" \
+          -verbosity:Info
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: coverage/*.trx
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: coverage/report
+
+    - name: Add coverage comment to PR
+      if: github.event_name == 'pull_request' && hashFiles('coverage/report/Summary.json') != ''
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        recreate: true
+        message: |
+          ## Code Coverage Report
+          Coverage details can be found in the artifacts.
+
+    - name: Check coverage threshold
+      run: |
+        # Check if Summary.json exists
+        if [ ! -f "coverage/report/Summary.json" ]; then
+          echo "⚠️ Coverage summary not found, skipping threshold check"
+          exit 0
+        fi
+        
+        # Extract coverage percentage from the summary
+        COVERAGE=$(cat coverage/report/Summary.json | grep -o '"linecoverage":[0-9.]*' | cut -d':' -f2 || echo "0")
+        echo "Current coverage: ${COVERAGE}%"
+        
+        # Set minimum coverage threshold (adjust as needed)
+        THRESHOLD=70
+        
+        # Use awk for floating point comparison (more reliable than bc)
+        if awk "BEGIN {exit !($COVERAGE < $THRESHOLD)}"; then
+          echo "❌ Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+          exit 1
+        else
+          echo "✅ Coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
+        fi
+
+  deploy:
+    needs: test
+    runs-on: self-hosted
+    name: Deploy to Production
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Publish the app
+      run: |
+        dotnet publish -c Release \
+          ./src/BowScore.Core.Web/BowScore.Core.Web.csproj \
+          --no-restore \
+          -o ./publish
+
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H 192.168.88.212 >> ~/.ssh/known_hosts
+
+    - name: Deploy to server via rsync
+      run: |
+        echo "🚀 Deploying files to server..."
+        rsync -avz --delete \
+          -e "ssh -i ~/.ssh/deploy_key -o ConnectTimeout=5" \
+          ./publish/ \
+          root@192.168.88.212:/var/www/bowscore-core/
+        echo "✅ Files deployed successfully"
+
+    - name: Restart service and verify deployment
+      run: |
+        echo "🔄 Restarting BowScore service..."
+        ssh -i ~/.ssh/deploy_key -o ConnectTimeout=5 root@192.168.88.212 << 'EOF'
+          systemctl restart bowscore.core
+          
+          echo "⏳ Waiting for service to start..."
+          sleep 10
+          
+          echo "🔍 Checking service status..."
+          systemctl status bowscore.core --no-pager
+          
+          echo "🏥 Testing health endpoint..."
+          # Install curl if not available
+          which curl >/dev/null 2>&1 || (apt-get update && apt-get install -y curl)
+          
+          # Test health endpoint with retry
+          for i in {1..5}; do
+            if curl -f -s http://localhost:5000/health > /dev/null; then
+              echo "✅ Health check passed on attempt $i"
+              curl -s http://localhost:5000/health | head -20
+              echo ""
+              echo "🎉 Deployment completed successfully!"
+              exit 0
+            else
+              echo "⚠️  Health check failed on attempt $i, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+          
+          echo "❌ Health check failed after 5 attempts"
+          echo "📋 Service logs:"
+          journalctl -u bowscore.core --no-pager -n 20
+          exit 1
+        EOF
+
+    - name: Cleanup SSH key
+      if: always()
+      run: |
+        rm -f ~/.ssh/deploy_key
+
+  notify:
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        if [[ "${{ needs.test.result }}" == "success" && "${{ needs.deploy.result }}" == "success" ]]; then
+          echo "✅ Deployment successful!"
+        elif [[ "${{ needs.test.result }}" == "failure" ]]; then
+          echo "❌ Tests failed - deployment blocked"
+          exit 1
+        elif [[ "${{ needs.deploy.result }}" == "failure" ]]; then
+          echo "❌ Deployment failed"
+          exit 1
+        else
+          echo "⚠️ Unexpected workflow state"
+          exit 1
+        fi

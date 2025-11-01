@@ -1,0 +1,1 @@
+CREATE TABLE  IF NOT EXISTS myshorty.urls (id uuid, short_url text, origional_url text)
