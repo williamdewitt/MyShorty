@@ -2,7 +2,7 @@
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-blueviolet?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-<!-- [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]() -->
+[![continuous](https://github.com/williamdewitt/MyShorty/actions/workflows/continuous.yml/badge.svg)](https://github.com/williamdewitt/MyShorty/actions/workflows/continuous.yml)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-William%20de%20Witt-blue?logo=linkedin)](https://www.linkedin.com/in/william-de-witt)
 
 **Learning the art of short links — a TinyURL clone powered by .NET**
