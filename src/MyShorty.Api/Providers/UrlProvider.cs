@@ -7,8 +7,9 @@ public static class UrlProvider
     var uriBuilder = new UriBuilder(uri);
     var scheme = uriBuilder.Scheme;
 
-    var url = uriBuilder.Uri.OriginalString
+    var url = uriBuilder.Uri.AbsoluteUri
       .Replace(scheme, string.Empty)
+      .Replace("://", string.Empty)
       .Replace("www.", string.Empty);
 
     return url;

@@ -8,14 +8,17 @@ namespace MyShorty.Api.Services;
 
 public class UrlShorteningService
 {
-  private readonly EncodingOptions _options;
-  private readonly MyShortyRepository _myShortyRepository;
+  private readonly ApplicationOptions _applicationOptions;
+  private readonly EncodingOptions _encodingOptions;
+  private readonly IMyShortyInterface _myShortyRepository;
 
   public UrlShorteningService(
-    IOptions<EncodingOptions> options,
-    MyShortyRepository myShortyRepository)
+    IOptions<ApplicationOptions> applicationOptions,
+    IOptions<EncodingOptions> encodingOptions,
+    IMyShortyInterface myShortyRepository)
   {
-    _options = options.Value;
+    _applicationOptions = applicationOptions.Value;
+    _encodingOptions = encodingOptions.Value;
     _myShortyRepository = myShortyRepository;
   }
 
@@ -24,20 +27,21 @@ public class UrlShorteningService
     var cleanUrl = UrlProvider.CleanUri(url);
 
     var encodedUrl = UrlShorteningEngine.Encode(cleanUrl);
-    var urlId = encodedUrl.Substring(0, _options.CharactersForId);
-
-    var shortUrl = string.Concat("http://localhost:5290", "/", urlId);
+    var urlId = encodedUrl.Substring(0, _encodingOptions.CharactersForId);
 
     var existingRecord = await GetOriginalUrl(urlId);
 
+    var urlBuilder = new UriBuilder(_applicationOptions.BaseUri);
+    urlBuilder.Path = urlId;
+
     if(existingRecord != default)
     {
-      return shortUrl;
+      return urlBuilder.Uri.ToString();
     }
 
     await _myShortyRepository.SaveUrlRecord(urlId, url);
 
-    return shortUrl;
+    return urlBuilder.Uri.ToString();
   }
 
   public async Task<string> GetOriginalUrl(string shortUrl)

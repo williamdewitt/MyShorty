@@ -4,7 +4,7 @@ using MyShorty.Api.Repositories.Dtos;
 
 namespace MyShorty.Api.Repositories;
 
-public class MyShortyRepository
+public class MyShortyRepository : IMyShortyInterface
 {
   private readonly MyShortyContext _myShortyContext;
 
