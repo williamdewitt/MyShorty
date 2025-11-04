@@ -1,4 +1,4 @@
-@MyShorty.Api_HostAddress = http://localhost:5290
+@MyShorty.Api_HostAddress = http://localhost:5000
 
 POST {{MyShorty.Api_HostAddress}}/generateShortUrl/
 Accept: application/json

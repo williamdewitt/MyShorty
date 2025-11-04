@@ -52,7 +52,9 @@ class Build : NukeBuild
       .DependsOn(Restore)
       .Executes(() =>
       {
-        DotNetTasks.DotNetBuild();
+        DotNetTasks.DotNetBuild(o => 
+          o.SetConfiguration(Configuration)
+        );
       });
 
   Target Test => _ => _
